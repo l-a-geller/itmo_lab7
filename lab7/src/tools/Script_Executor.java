@@ -23,11 +23,6 @@ public class Script_Executor {
 
                     String[] parts = line.split(" ", 2);
                     String COMMAND = parts[0];
-
-                    //ParametrizedCommand pc = CommandInvoker.getParametrizedCommand(line.trim().toUpperCase());
-                    //if (pc != null){
-                    //    pc.execute(scanner);
-                    //}else {
                         Command comm = CommandInvoker.getCommand(COMMAND);
                         if(comm != null){
                             CommandInvoker.loadToSavedCommands(comm);

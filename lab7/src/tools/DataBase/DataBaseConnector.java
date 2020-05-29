@@ -1,7 +1,6 @@
 package tools.DataBase;
 
 import data.*;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -9,53 +8,24 @@ import java.security.SecureRandom;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.TreeSet;
 
 public class DataBaseConnector {
     private static String tablename;
     private static Connection connection;
+
     static {
-        //create a BD
         try {
             Class.forName("org.postgresql.Driver");
-            tablename = "customers";
-            connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/users", "postgres", "Baraban5!");
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            System.out.println("Wrong database congiguration");
-        }
+            tablename = "clients";
+            connection = DriverManager.getConnection("jdbc:postgresql://pg:5432/studs", "s282518", "pbk389");
+        } catch (SQLException | ClassNotFoundException e) {}
     }
 
     public static boolean register(String username, String password) throws SQLException {
-
-        /*PreparedStatement statement = connection.prepareStatement("select * from users.public.customers");
-        ResultSet rs = statement.executeQuery();
-
-        do {
-            if (!rs.next()) {
-                statement = connection.prepareStatement("insert into " + tablename + " values (?, ?, ?)");
-                String salt = getSalt();
-                String hash = hash(new String(password), salt);
-                statement.setString(1, username);
-                statement.setString(2, hash);
-                statement.setString(3, salt);
-                statement.execute();
-                statement.close();
-                return true;
-            }
-        } while(!username.equals(rs.getString("username")));
-
-        return false;*/
-
-        //PreparedStatement ps = connection.prepareStatement("SELECT username from" + tablename);
-        //ResultSet rs = ps.executeQuery();
-        //INSERT INTO users ("user", pass) VALUES ('rita', 'huita')
-        PreparedStatement statement = connection.prepareStatement("select * from " + tablename + " where users.public.customers.user = ?");
+        PreparedStatement statement = connection.prepareStatement("select * from " + tablename + " where clientname = ?");
         statement.setString(1, username);
         ResultSet rs = statement.executeQuery();
-        if (rs.next()){
-            return false;
-        }
+        if (rs.next()){ return false; }
 
         PreparedStatement ps = connection.prepareStatement("INSERT INTO " + tablename + " VALUES(?, ?, ?) ");
         String salt = getSalt();
@@ -67,21 +37,13 @@ public class DataBaseConnector {
     }
 
     public static boolean login(String username, String password) throws SQLException{
-
-        PreparedStatement statement = connection.prepareStatement("select * from " + tablename + " where users.public.customers.user = ?");
+        PreparedStatement statement = connection.prepareStatement("select * from " + tablename + " where clientname = ?");
         statement.setString(1, username);
         ResultSet rs = statement.executeQuery();
-        //("Salts    " + hash(password, rs.getString("salt"))  + "/t" + rs.getString("pass"));
         return rs.next() && hash(password, rs.getString("salt")).equals(rs.getString("pass"));
-
-        //PreparedStatement ps = connection.prepareStatement("SELECT * FROM " + tablename + " WHERE users.public.customers.user = ?");
-        //ps.setString(1, username);
-        //ResultSet rs = ps.executeQuery();
-        //return rs.next() && hash(new String(password), rs.getString("salt")).equals(rs.getString("password")) ? true : false;
     }
 
     public static boolean writeLab(String l, String login){
-
         String[] labpts = l.split(",");
         Coordinates coordinates = new Coordinates(Integer.parseInt(labpts[1]), Float.parseFloat(labpts[2]));
         Difficulty diff = Difficulty.values()[Integer.parseInt(labpts[5])];
@@ -122,12 +84,10 @@ public class DataBaseConnector {
     }
     public static ArrayList<LabWork> readLab(){
         try {
-            //TreeSet<LabWork> labs = new TreeSet<>();
             ArrayList<LabWork> labs = new ArrayList<LabWork>();
             PreparedStatement ps = connection.prepareStatement("SELECT * from labworks");
             ResultSet rs = ps.executeQuery();
             while (rs.next()){
-                //rs.next();
                 String name = rs.getString(1);
                 Coordinates coordinates = new Coordinates(rs.getInt(2), rs.getFloat(3));
                 Float minimalPoint = rs.getFloat(4);
@@ -135,16 +95,9 @@ public class DataBaseConnector {
                 Difficulty difficulty = Difficulty.values()[rs.getInt(6)];
                 Discipline discipline = new Discipline(rs.getString(7), rs.getInt(8), rs.getInt(9), rs.getLong(10));
                 int id = rs.getInt("id");
-                //System.out.println(id);
                 LabWork labWork = new LabWork(id, name, coordinates, minimalPoint, maximumPoint, difficulty, discipline, rs.getString("author"));
-
-                //labs.add(labWork);
-                //System.out.println("itera" + labWork.getId());
                 labs.add(labWork);
-
             }
-            //System.out.println(labs.size());
-            //System.out.println(labs.size());
             return labs;
         }catch (Exception e){
             e.printStackTrace();

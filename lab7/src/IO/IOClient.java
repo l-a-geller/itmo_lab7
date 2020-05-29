@@ -1,7 +1,5 @@
 package IO;
 
-import tools.Java2DB;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -83,10 +81,6 @@ public class IOClient implements IOinterface {
       } catch (IOException e) {
          e.printStackTrace();
          this.socCh.close();
-
-         Java2DB j2 = new Java2DB();
-         j2.writeXML();
-
          throw new ConnectException("Connection aborted");
       }
    }
