@@ -1,5 +1,8 @@
+//java -cp lib/postgresql-42.2.12.jar; Server 9876
+
 import IO.IOClient;
 import IO.IOinterface;
+import IO.ReadTask;
 import data.*;
 import tools.*;
 import tools.DataBase.DataBaseConnector;
@@ -20,9 +23,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeSet;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Server {
    public static boolean sent;
+
+   private static ExecutorService ftp = Executors.newFixedThreadPool(2);
+   private static ForkJoinPool fjp = new ForkJoinPool();
+   private static ReadWriteLock rrl = new ReentrantReadWriteLock();
+
    //public static boolean logged = false;
   // private static DataBaseConnector dsc;
 
@@ -69,23 +80,66 @@ public class Server {
                            ioClient.writeObj(collectionSender);                                          //sent a collection
                            sent = true;
                         } else {
-                           processCommand(comm, ioClient);                                               // processing a command
+                           Command finalComm = comm;
+                           IOinterface finalIoClient = ioClient;
+                           ftp.submit(() -> {
+                              try {
+                                 rrl.writeLock().lock();
+                                 processCommand(finalComm, finalIoClient);                                               // processing a command
+                              } catch (IOException e) {
+                                 //e.printStackTrace();
+                              }finally {
+                                 rrl.writeLock().unlock();
+                              }
+                           });
                         }
 
                         selKey.interestOps(1);
                      }
 
                      if (selKey.isReadable()) {
-                        ioClient = new IOClient((SocketChannel)selKey.channel(), true);
-                        trans = (Transport)ioClient.readObj();                                             // reading a command
-                        comm = (Command) trans.getObject();
+                        //ftp.execute(() -> {
+                           ioClient = new IOClient((SocketChannel)selKey.channel(), true);
+                           //trans = (Transport)ioClient.readObj();                                             // reading a command
+                           //comm = (Command) trans.getObject();
+
+
+                        IOinterface finalIoClient1 = ioClient;
+                        Future<Command> future = ftp.submit(() -> (Command)((Transport) finalIoClient1.readObj()).getObject());
+
+                        comm = future.get();
                         System.out.println("Command received " + comm.getName());
                         selKey.interestOps(4);
+                        //ioClient = new IOClient((SocketChannel)selKey.channel(), true);
+                        //IOinterface finalIoClient1 = ioClient;
+                        //ftp.execute(() -> {
+                          // try {
+
+                              //trans = (Transport) finalIoClient1.readObj();                                             // reading a command
+                              //Command com = (Command) trans.getObject();
+                              //System.out.println("Command received " + com.getName());
+
+                           //} catch (IOException | ClassNotFoundException e) {
+                           //   e.printStackTrace();
+                           //}
+
+                        //});
+
+                        //ReadTask task = new ReadTask(selKey, ioClient, trans, comm);
+                        //Thread thread = new Thread(task);
+                        //thread.start();
+                        //ftp.execute(task);
+                        //selKey.interestOps(4);
+                        //});
                      }
                   }
                } catch (ConnectException e) {
                   System.out.println(e.getMessage());
                   sent = false;
+               } catch (InterruptedException e) {
+                  e.printStackTrace();
+               } catch (ExecutionException e) {
+                  e.printStackTrace();
                }
             }
          }
@@ -99,16 +153,6 @@ public class Server {
 
    private static void processCommand(Command comm, IOinterface ioClient) throws IOException {
 
-      //if (!logged){
-         //try {
-            //if(!dsc.login("users", comm.login)){
-            //   ioClient.writeln("NOT_LOGGED");                 // writing answer to client (no user found)
-            //   return;
-            //}
-         //}catch (SQLException e){
-         //   System.out.println("Troubles with logging in");
-         //}
-      //}
       System.out.println(comm.getName());
       String res = "";
       if (comm.getName().equals("QUIT")){
@@ -131,7 +175,7 @@ public class Server {
          }
          res = comm.getAnswer();
       }
-      ioClient.writeln(res);
+      ioClient.writeln(res);                                            // writing to client
    }
 
    private static void loadLabs(){

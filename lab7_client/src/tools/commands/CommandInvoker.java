@@ -69,8 +69,6 @@ public class CommandInvoker {
                     this.ioServer.writeObj(trans);                        // writing to server
                     long start = System.currentTimeMillis();
 
-                    System.out.println(" > > > Sent data to server............");
-
                     while (!this.ioServer.ready()) {
                         long finish = System.currentTimeMillis();
                         if (finish - start > 2000L) {
@@ -78,7 +76,7 @@ public class CommandInvoker {
                         }
                     }
 
-                    System.out.println("> > > Second part...........");
+
 
                     boolean i = true;
                     while (this.ioServer.ready()) {

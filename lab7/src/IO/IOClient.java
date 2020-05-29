@@ -27,7 +27,16 @@ public class IOClient implements IOinterface {
    }
 
    public void writeln(String str) throws IOException {
-      this.write(str + "\n");
+      Runnable r = () -> {
+         try {
+            System.out.println(Thread.currentThread().getName());
+            this.write(str + "\n");
+         } catch (IOException e) {
+            e.printStackTrace();
+         }
+      };
+      Thread thread = new Thread(r);
+      thread.start();
    }
 
    public String readLine() throws IOException {
@@ -47,11 +56,22 @@ public class IOClient implements IOinterface {
    }
 
    public void writeObj(Object obj) throws IOException {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      ObjectOutputStream oos = new ObjectOutputStream(baos);
-      oos.writeObject(obj);
-      oos.flush();
-      this.socCh.write(ByteBuffer.wrap(baos.toByteArray()));
+      //Task - make a new thread
+      Runnable r = () -> {
+         System.out.println("Thread active: " + Thread.currentThread().getName());
+         ByteArrayOutputStream baos = new ByteArrayOutputStream();
+         ObjectOutputStream oos = null;
+         try {
+            oos = new ObjectOutputStream(baos);
+            oos.writeObject(obj);
+            oos.flush();
+            this.socCh.write(ByteBuffer.wrap(baos.toByteArray()));
+         } catch (IOException e) {
+            e.printStackTrace();
+         }
+      };
+      Thread thread = new Thread(r);
+      thread.start();
    }
 
    public Object readObj() throws IOException, ClassNotFoundException {
@@ -60,7 +80,8 @@ public class IOClient implements IOinterface {
       try {
          this.socCh.read(bb);
          return (new ObjectInputStream(new ByteArrayInputStream(bb.array()))).readObject();
-      } catch (IOException var3) {
+      } catch (IOException e) {
+         e.printStackTrace();
          this.socCh.close();
 
          Java2DB j2 = new Java2DB();

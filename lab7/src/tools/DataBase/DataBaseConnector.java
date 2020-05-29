@@ -2,8 +2,13 @@ package tools.DataBase;
 
 import data.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.TreeSet;
 
 public class DataBaseConnector {
@@ -22,24 +27,57 @@ public class DataBaseConnector {
     }
 
     public static boolean register(String username, String password) throws SQLException {
+
+        /*PreparedStatement statement = connection.prepareStatement("select * from users.public.customers");
+        ResultSet rs = statement.executeQuery();
+
+        do {
+            if (!rs.next()) {
+                statement = connection.prepareStatement("insert into " + tablename + " values (?, ?, ?)");
+                String salt = getSalt();
+                String hash = hash(new String(password), salt);
+                statement.setString(1, username);
+                statement.setString(2, hash);
+                statement.setString(3, salt);
+                statement.execute();
+                statement.close();
+                return true;
+            }
+        } while(!username.equals(rs.getString("username")));
+
+        return false;*/
+
         //PreparedStatement ps = connection.prepareStatement("SELECT username from" + tablename);
         //ResultSet rs = ps.executeQuery();
         //INSERT INTO users ("user", pass) VALUES ('rita', 'huita')
-        PreparedStatement ps = connection.prepareStatement("INSERT INTO " + tablename + " VALUES(?, ?) ");
+        PreparedStatement statement = connection.prepareStatement("select * from " + tablename + " where users.public.customers.user = ?");
+        statement.setString(1, username);
+        ResultSet rs = statement.executeQuery();
+        if (rs.next()){
+            return false;
+        }
+
+        PreparedStatement ps = connection.prepareStatement("INSERT INTO " + tablename + " VALUES(?, ?, ?) ");
+        String salt = getSalt();
         ps.setString(1, username);
-        ps.setString(2, password);
+        ps.setString(2, hash(password, salt));
+        ps.setString(3, salt);
         ps.executeUpdate();
         return true;
     }
 
     public static boolean login(String username, String password) throws SQLException{
-        //Statement st = connection.createStatement();
-        //ResultSet rs = st.executeQuery("SELECT * FROM .users where users.public.users.pass" = password);
 
-        PreparedStatement ps = connection.prepareStatement("SELECT * FROM " + tablename + " WHERE users.public.customers.pass = ?");
-        ps.setString(1, password);
-        ResultSet rs = ps.executeQuery();
-        return rs.next();
+        PreparedStatement statement = connection.prepareStatement("select * from " + tablename + " where users.public.customers.user = ?");
+        statement.setString(1, username);
+        ResultSet rs = statement.executeQuery();
+        //("Salts    " + hash(password, rs.getString("salt"))  + "/t" + rs.getString("pass"));
+        return rs.next() && hash(password, rs.getString("salt")).equals(rs.getString("pass"));
+
+        //PreparedStatement ps = connection.prepareStatement("SELECT * FROM " + tablename + " WHERE users.public.customers.user = ?");
+        //ps.setString(1, username);
+        //ResultSet rs = ps.executeQuery();
+        //return rs.next() && hash(new String(password), rs.getString("salt")).equals(rs.getString("password")) ? true : false;
     }
 
     public static boolean writeLab(String l, String login){
@@ -134,6 +172,27 @@ public class DataBaseConnector {
             ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static String getSalt() {
+        byte[] salt = new byte[16];
+        SecureRandom sr = new SecureRandom();
+        sr.nextBytes(salt);
+        return new String(salt, StandardCharsets.UTF_8);
+    }
+
+    private static String hash(String password, String salt) {
+        try {
+            String pepper = "22&3CdsFgh2cL97#3";
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
+            byte[] data = (pepper + password + salt).getBytes(StandardCharsets.UTF_8);
+            byte[] hashbytes = md.digest(data);
+            String s = Base64.getEncoder().encodeToString(hashbytes);
+            System.out.println(s);
+            return s;
+        } catch (NoSuchAlgorithmException e) {
+            return password;
         }
     }
 }
