@@ -17,7 +17,7 @@ public class DataBaseConnector {
         try {
             Class.forName("org.postgresql.Driver");
             tablename = "clients";
-            connection = DriverManager.getConnection("jdbc:postgresql://pg:5432/studs", "s282518", "pbk389");
+            connection = DriverManager.getConnection("jdbc:postgresql://pg:5432/studs", "s_login", "passw");
         } catch (SQLException | ClassNotFoundException e) {}
     }
 
